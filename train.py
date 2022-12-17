@@ -7,7 +7,7 @@ from gflownet.gflownet import GFlowNet
 from policy import ForwardPolicy, BackwardPolicy
 from gflownet.utils import trajectory_balance_loss
 from torch.optim import Adam
-from grid import Grid
+from envs.grid_3_actions import Grid
 
 size = 16
 
