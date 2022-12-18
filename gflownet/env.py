@@ -36,3 +36,10 @@ class Env(ABC):
             s: An NxD matrix of state vectors
         """
         pass
+    
+    @abstractmethod
+    def to(self, *args, **kwargs):
+        """
+        Moves the environment to the specified device.
+        """
+        pass

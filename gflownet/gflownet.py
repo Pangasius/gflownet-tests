@@ -26,6 +26,7 @@ class GFlowNet(nn.Module):
         self.forward_policy = forward_policy
         self.backward_policy = backward_policy
         self.env = env
+        self.device = "cpu"
     
     def mask_and_normalize(self, s, probs):
         """
@@ -61,8 +62,8 @@ class GFlowNet(nn.Module):
             sampling process (e.g. the trajectory of each sample, the forward
             and backward probabilities, the actions taken, etc.)
         """
-        s = s0.clone()
-        done = torch.BoolTensor([False] * len(s))
+        s = s0.clone().to(self.device) 
+        done = torch.BoolTensor([False] * len(s)).to(self.device)
         log = Log(s0, self.backward_policy, self.total_flow, self.env) if return_log else None
 
         while not done.all():
@@ -112,3 +113,11 @@ class GFlowNet(nn.Module):
         rewards = self.env.reward(finals)
         
         return fwd_probs, back_probs, rewards
+    
+    def to(self, *args, **kwargs):
+        self.forward_policy.to(*args, **kwargs)
+        self.backward_policy.to(*args, **kwargs)
+        self.total_flow.to(*args, **kwargs)
+        self.env.to(*args, **kwargs)
+        self.device = args[0]
+        return super().to(*args, **kwargs)

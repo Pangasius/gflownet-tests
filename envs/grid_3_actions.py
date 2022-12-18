@@ -7,6 +7,7 @@ class Grid(Env):
         self.size = size
         self.state_dim = size**2
         self.num_actions = 3 # down, right, terminate
+        self.device = "cpu"
         
     def update(self, s, actions):
         idx = s.argmax(1)
@@ -16,7 +17,7 @@ class Grid(Env):
         return one_hot(idx, self.state_dim).float()
     
     def mask(self, s):
-        mask = torch.ones(len(s), self.num_actions)
+        mask = torch.ones(len(s), self.num_actions).to(self.device)
         idx = s.argmax(1) + 1
         right_edge = (idx > 0) & (idx % (self.size) == 0)
         bottom_edge = idx > self.size*(self.size-1)
@@ -43,4 +44,8 @@ class Grid(Env):
         rewards = self.reward(grid)
         
         return rewards
+    
+    def to(self, *args, **kwargs):
+        self.device = args[0]
+        return self
          

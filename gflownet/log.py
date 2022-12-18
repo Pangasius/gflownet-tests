@@ -26,8 +26,9 @@ class Log:
         self._fwd_probs = []
         self._back_probs = None
         self._actions = []
-        self.rewards = torch.zeros(len(s0))
         self.num_samples = s0.shape[0]
+        self.device = s0.device
+        self.rewards = torch.zeros(len(s0)).to(self.device)
     
     def log(self, s, probs, actions, done):
         """
@@ -46,22 +47,23 @@ class Log:
             done: An Nx1 Boolean vector indicating which samples are complete
             (True) and which are incomplete (False)
         """
-        had_terminating_action = actions == probs.shape[-1] - 1
+        had_terminating_action = (actions == probs.shape[-1] - 1)
         active, just_finished = ~done, ~done
-        active[active == True] = ~had_terminating_action
-        just_finished[just_finished == True] = had_terminating_action
+        active[active == True] = (~had_terminating_action)
+        just_finished[just_finished == True] = (had_terminating_action)
     
         states = self._traj[-1].squeeze(1).clone()
         states[active] = s[active]
         self._traj.append(states.view(self.num_samples, 1, -1))
         
-        fwd_probs = torch.ones(self.num_samples, 1)
+        fwd_probs = torch.ones(self.num_samples, 1).to(self.device)
         fwd_probs[~done] = probs.gather(1, actions.unsqueeze(1))
         self._fwd_probs.append(fwd_probs)
         
-        _actions = -torch.ones(self.num_samples, 1).long()
+        _actions = -torch.ones(self.num_samples, 1).long().to(self.device)
         _actions[~done] = actions.unsqueeze(1)
         self._actions.append(_actions)
+        
         
         self.rewards[just_finished] = self.env.reward(s[just_finished])
     
