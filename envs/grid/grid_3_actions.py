@@ -34,6 +34,12 @@ class Grid(Env):
         R2_term = torch.prod((0.3 < norm) & (norm < 0.4), dim=1)
         return (R0 + R1*R1_term + R2*R2_term)
     
+    def terminal_action(self, actions):
+        return actions == self.num_actions - 1
+    
+    def terminal_state(self, s):
+        return torch.zeros(len(s)).to(self.device).bool()
+    
     def to_grid(self) :
         #for every possible state, compute the reward
         

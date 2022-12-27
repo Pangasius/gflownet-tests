@@ -74,7 +74,7 @@ class GFlowNet(nn.Module):
             if return_log:
                 log.log(s, probs, actions, done)
                 
-            terminated = actions == probs.shape[-1] - 1
+            terminated = torch.logical_or(self.env.terminal_state(s[~done]), self.env.terminal_action(actions))
             done[~done] = terminated
         
         return (s, log) if return_log else s
