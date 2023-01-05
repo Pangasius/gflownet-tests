@@ -38,7 +38,7 @@ class Env(ABC):
         pass
     
     @abstractmethod
-    def terminal_state(self, s):
+    def terminal_state(self, s, iteration):
         """
         Defines a terminal condition, mapping states to booleans.
         
@@ -54,12 +54,5 @@ class Env(ABC):
         
         Args:
             s: An NxD matrix of state vectors
-        """
-        pass
-    
-    @abstractmethod
-    def to(self, *args, **kwargs):
-        """
-        Moves the environment to the specified device.
         """
         pass

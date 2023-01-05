@@ -23,14 +23,13 @@ class BackwardPolicy:
         super().__init__()
         self.num_actions = num_actions
         self.size = int(state_dim**0.5)
-        self.device = "cpu"
     
     def __call__(self, s):
         idx = s.argmax(-1)
         at_top_edge = idx < self.size
         at_left_edge = (idx > 0) & (idx % self.size == 0)
         
-        probs = torch.ones(len(s), self.num_actions).to(self.device)
+        probs = torch.ones(len(s), self.num_actions).to(s.device)
         probs[at_left_edge, 1] = 0
         probs[at_top_edge, 0] = 0
         probs[:, -1] = 0 # disregard termination
@@ -39,7 +38,3 @@ class BackwardPolicy:
         probs = probs / probs.sum(-1, keepdim=True)
         
         return probs
-    
-    def to(self, *args, **kwargs):
-        self.device = args[0]
-        return self

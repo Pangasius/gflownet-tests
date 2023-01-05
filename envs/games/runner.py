@@ -21,8 +21,6 @@ class Runner(Env) :
         #state = position, ducking, jumping, dead
         self.state_dim = 4
         
-        self.device = "cpu"
-        
     def update(self, s, actions):
         jump, duck, nothing = actions == 0, actions == 1, actions == 2
         
@@ -56,15 +54,11 @@ class Runner(Env) :
         #the reward is the position of the runner if he is alive
         return s[:, 0]
     
-    def terminal_state(self, s):
+    def terminal_state(self, s, iteration=0):
         return torch.logical_or(s[:, 0] >= self.max_length, s[:, 3] == 1)
     
     def terminal_action(self, actions):
         return torch.zeros(len(actions)).to(actions.device)
-    
-    def to(self, *args, **kwargs):
-        self.device = args[0]
-        return self
     
     def plot(self, s, fig_name):
         plt.figure()

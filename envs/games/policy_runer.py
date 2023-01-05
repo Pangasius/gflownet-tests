@@ -29,17 +29,12 @@ class BackwardPolicy:
     def __init__(self, num_actions):
         super().__init__()
         self.num_actions = num_actions
-        self.device = "cpu"
     
     def __call__(self, s):
-        probs = torch.ones(len(s), self.num_actions).to(self.device)
+        probs = torch.ones(len(s), self.num_actions).to(s.device)
         
         #if not jumping or ducking, then can't backprop it
         probs[:, 0] = torch.where(s[:, 1].bool(), torch.zeros_like(probs[:, 0]), torch.ones_like(probs[:, 0]))
         probs[:, 1] = torch.where(s[:, 2].bool(), torch.zeros_like(probs[:, 1]), torch.ones_like(probs[:, 1]))
          
         return probs
-    
-    def to(self, *args, **kwargs):
-        self.device = args[0]
-        return self

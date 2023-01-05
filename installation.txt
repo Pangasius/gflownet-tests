@@ -1,0 +1,5 @@
+conda create env_name python=3.10 matplotlib pytorch pytorch-cuda=11.7 pyg -c pytorch -c nvidia -c pyg
+
+or 
+
+conda env create -f environment.yml

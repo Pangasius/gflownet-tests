@@ -26,7 +26,6 @@ class GFlowNet(nn.Module):
         self.forward_policy = forward_policy
         self.backward_policy = backward_policy
         self.env = env
-        self.device = "cpu"
     
     def mask_and_normalize(self, s, probs):
         """
@@ -62,9 +61,10 @@ class GFlowNet(nn.Module):
             sampling process (e.g. the trajectory of each sample, the forward
             and backward probabilities, the actions taken, etc.)
         """
-        s = s0.clone().to(self.device) 
-        done = torch.BoolTensor([False] * len(s)).to(self.device)
+        s = s0.clone().to(s0.device) 
+        done = torch.BoolTensor([False] * len(s)).to(s0.device)
         log = Log(s0, self.backward_policy, self.total_flow, self.env) if return_log else None
+        counter = 0
 
         while not done.all():
             probs = self.forward_probs(s[~done])
@@ -72,10 +72,12 @@ class GFlowNet(nn.Module):
             s[~done] = self.env.update(s[~done], actions)
             
             if return_log:
+                #we can disable pylance reportOptionalMemberAccess error for this
                 log.log(s, probs, actions, done)
                 
-            terminated = torch.logical_or(self.env.terminal_state(s[~done]), self.env.terminal_action(actions))
+            terminated = torch.logical_or(self.env.terminal_state(s[~done], counter), self.env.terminal_action(actions))
             done[~done] = terminated
+            counter += 1
         
         return (s, log) if return_log else s
     
@@ -113,11 +115,3 @@ class GFlowNet(nn.Module):
         rewards = self.env.reward(finals)
         
         return fwd_probs, back_probs, rewards
-    
-    def to(self, *args, **kwargs):
-        self.forward_policy.to(*args, **kwargs)
-        self.backward_policy.to(*args, **kwargs)
-        self.total_flow.to(*args, **kwargs)
-        self.env.to(*args, **kwargs)
-        self.device = args[0]
-        return super().to(*args, **kwargs)
