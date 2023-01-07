@@ -36,7 +36,7 @@ class Grid(Env):
     def terminal_action(self, actions):
         return actions == self.num_actions - 1
     
-    def terminal_state(self, s, iteration=0):
+    def terminal_state(self, s):
         return torch.zeros(len(s)).to(s.device).bool()
     
     def to_grid(self) :

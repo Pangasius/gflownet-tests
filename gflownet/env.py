@@ -38,7 +38,7 @@ class Env(ABC):
         pass
     
     @abstractmethod
-    def terminal_state(self, s, iteration):
+    def terminal_state(self, s):
         """
         Defines a terminal condition, mapping states to booleans.
         

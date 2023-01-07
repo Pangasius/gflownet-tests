@@ -21,10 +21,10 @@ class MovingCells(Env) :
         # or move a cell that doesn't exist
         #but also not delete a cell that we just created or move a cell in another direction
         
-        self.limit = 50 #the maximum number of actions that can be performed in a row
+        self.limit = graph_size**2 // 3 #the maximum number of actions that can be performed in a row
         self.max_cells = graph_size**2 #the maximum number of cells that can be created
         
-        self.state_dim = graph_size ** 2 * 2 #the state is a graph of cells, each cell has two attributes: x and y
+        self.state_dim = (1 + graph_size ** 2) * 2 #the state is a graph of cells, each cell has two attributes: x and y
         
         self.edge_distance = edge_distance #the maximum distance between two cells to be connected
         
@@ -34,7 +34,11 @@ class MovingCells(Env) :
     def update(self, s, actions) :
         create, delete, up, right, down, left, terminate = actions == 0, actions == 1, actions == 2, actions == 3, actions == 4, actions == 5, actions == 6
         
-        s = s.view(-1, self.graph_size ** 2, 2)
+        s = s.view(-1, 1 + self.graph_size ** 2, 2)
+        
+        iteration_number = s[:, 0, :].view(-1, 1, 2)
+        
+        s = s[:, 1:, :]
         
         number_of_cells =  torch.sum(~torch.isnan(s), dim=1)[:,0]
         
@@ -50,18 +54,21 @@ class MovingCells(Env) :
         #we can delete a cell by turning one random cell into one nan cell
         s[delete][:, random_cell] = torch.tensor([float('nan'), float('nan')], dtype=torch.float).to(s.device)
         
+        s[up][:, random_cell] += torch.tensor([0, 0.1]).to(s[up].device)
+        s[down][:, random_cell] += torch.tensor([0, -0.1]).to(s[down].device)
+        s[right][:, random_cell] += torch.tensor([0.1, 0]).to(s[right].device)
+        s[left][:, random_cell] += torch.tensor([-0.1, 0]).to(s[left].device)
         
-        s[up][:, random_cell] += torch.tensor([0, 1]).to(s[up].device)
-        s[down][:, random_cell] += torch.tensor([0, -1]).to(s[down].device)
-        s[right][:, random_cell] += torch.tensor([1, 0]).to(s[right].device)
-        s[left][:, random_cell] += torch.tensor([-1, 0]).to(s[left].device)
+        s = torch.cat([iteration_number + 1, s], dim=1)
         
         s = s.view(s.shape[0], -1)
         
         return s
     
     def mask(self, s) :
-        s = s.view(-1, self.graph_size ** 2, 2)
+        s = s.view(-1, 1 + self.graph_size ** 2, 2)
+        
+        s = s[:, 1:, :]
         
         mask = torch.ones(s.shape[0], self.num_actions).to(s.device)
 
@@ -70,7 +77,7 @@ class MovingCells(Env) :
         
         number_of_cells = torch.sum(~torch.isnan(s), dim=1)[:,0]
         
-        mask[:, 1] = number_of_cells > 0
+        mask[:, 1] = number_of_cells > 1
         mask[:, 0] = number_of_cells < self.max_cells
         
         return mask
@@ -78,13 +85,15 @@ class MovingCells(Env) :
     def terminal_action(self, actions):
         return actions == 6
     
-    def terminal_state(self, s, iteration=0):
-        s = s.view(-1, self.graph_size ** 2, 2)
-        return torch.repeat_interleave(torch.tensor(iteration >= self.limit, dtype=torch.bool), len(s)).to(s.device)
+    def terminal_state(self, s):
+        s = s.view(-1, 1 + self.graph_size ** 2, 2)
+        iteration_number = s[:, 0, 0]
+        return iteration_number >= self.limit
     
     def reward(self, s):
         #there are 4 objectives and we need to be close to all of them
-        s = s.view(-1, self.graph_size ** 2, 2)
+        s = s.view(-1, 1 + self.graph_size ** 2, 2)
+        s = s[:, 1:, :]
         rewards  = torch.zeros(len(s)).to(s.device)
         for f in self.objectives :
             rewards  = rewards + torch.tensor([f(si) for si in s]).to(s.device)
@@ -115,9 +124,11 @@ class MovingCells(Env) :
     def plot(self, s, fig_name):
         plt.figure()
         
-        s = s.view(-1, self.graph_size ** 2, 2)
+        s = s.view(-1, 1 + self.graph_size ** 2, 2)
         
         s = s[torch.argmax(self.reward(s))]
+        
+        s = s[1:, :]
         
         s = s[~torch.isnan(s).any(dim=1)]
         

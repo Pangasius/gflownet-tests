@@ -64,20 +64,20 @@ class GFlowNet(nn.Module):
         s = s0.clone().to(s0.device) 
         done = torch.BoolTensor([False] * len(s)).to(s0.device)
         log = Log(s0, self.backward_policy, self.total_flow, self.env) if return_log else None
-        counter = 0
 
         while not done.all():
             probs = self.forward_probs(s[~done])
+
             actions = Categorical(probs).sample()
+
             s[~done] = self.env.update(s[~done], actions)
             
             if return_log:
                 #we can disable pylance reportOptionalMemberAccess error for this
                 log.log(s, probs, actions, done)
                 
-            terminated = torch.logical_or(self.env.terminal_state(s[~done], counter), self.env.terminal_action(actions))
+            terminated = torch.logical_or(self.env.terminal_state(s[~done]), self.env.terminal_action(actions))
             done[~done] = terminated
-            counter += 1
         
         return (s, log) if return_log else s
     

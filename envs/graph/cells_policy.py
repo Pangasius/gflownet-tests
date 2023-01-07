@@ -22,18 +22,19 @@ class ForwardPolicy(torch.nn.Module) :
         #this is a classification problem, so we need to output a probability distribution
         self.conv = torch.nn.Conv2d(self.out_channels * self.heads, 2, kernel_size=2)
         
-        self.dense1 = torch.nn.Linear(self.hidden_dim, self.hidden_dim)
+        self.dense1 = torch.nn.Linear(2 * ((self.graph_size-1) ** 2), self.hidden_dim)
         self.dense2 = torch.nn.Linear(self.hidden_dim, self.num_actions)
         
     def forward(self, data):
-        data = data.view(-1, self.graph_size ** 2, 2)
+        data = data.view(-1, 1 + self.graph_size ** 2, 2)
+        data = data[:, 1:, :]
                 
         batch = torch.arange(data.shape[0], dtype=torch.long).to(data.device)
         batch = batch.repeat_interleave(data.shape[1])
         
         batch_size = data.shape[0]
         
-        data = data.view(-1, 2)
+        data = data.reshape(-1, 2)
         
         final = torch.zeros(batch_size, self.num_actions).to(data.device)
         
@@ -41,7 +42,7 @@ class ForwardPolicy(torch.nn.Module) :
         for i in range(batch_size):
             data_bis = data[batch == i].to(data.device)
             
-            data_bis[torch.isnan(data_bis)] = -10
+            data_bis[torch.isnan(data_bis)] = -1
         
             edge_index = radius_graph(data_bis.to("cpu"), r=self.edge_distance, loop=False, max_num_neighbors=4).to(data_bis.device)
             edge_attr = torch.norm(data_bis[edge_index[0]] - data_bis[edge_index[1]], dim=1).view(-1, 1).to(data_bis.device)
@@ -54,7 +55,7 @@ class ForwardPolicy(torch.nn.Module) :
             
             final[i] = data_bis
         
-        return final.view(-1, self.num_actions)
+        return final
     
 class BackwardPolicy:
     def __init__(self, num_actions, graph_size):
@@ -63,7 +64,8 @@ class BackwardPolicy:
         self.graph_size = graph_size
     
     def __call__(self, s):
-        s = s.view(-1, self.graph_size ** 2, 2)
+        s = s.view(-1, 1 + self.graph_size ** 2, 2)
+        s = s[:, 1:, :]
         
         probs = torch.ones(len(s), self.num_actions).to(s.device)
         
@@ -73,10 +75,10 @@ class BackwardPolicy:
         
         number_of_cells = torch.sum(~torch.isnan(s), dim=1)[:,0]
         
-        #can't backprop create if there are no nodes
-        probs[number_of_cells > 0, 0] = 0
+        #can't backprop create if there are no nodes (or one)
+        probs[number_of_cells <= 1, 0] = 0
         
         #can't backprop delete if there are self.graph_size**2 nodes
-        probs[number_of_cells == self.graph_size**2, 1] = 0
+        probs[number_of_cells >= self.graph_size**2, 1] = 0
         
         return probs

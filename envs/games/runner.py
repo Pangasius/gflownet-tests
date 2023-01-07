@@ -54,7 +54,7 @@ class Runner(Env) :
         #the reward is the position of the runner if he is alive
         return s[:, 0]
     
-    def terminal_state(self, s, iteration=0):
+    def terminal_state(self, s):
         return torch.logical_or(s[:, 0] >= self.max_length, s[:, 3] == 1)
     
     def terminal_action(self, actions):
